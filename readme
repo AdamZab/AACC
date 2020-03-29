@@ -1,0 +1,16 @@
+Automatic Air Conditioning Control
+
+Device controls simple ON/OFF air conditioning in car. 3 modes: ON, OFF, AUTOMATIC. On automatic mode you can set temperature and device will maintain it. 
+
+Used elements:
+- Arduino UNO R3 CH340 AVR ATmega 328
+- LCD display 1602 + i2C converter (display: mode, measured temperature, set temperature)
+- 3x tack switch (mode, up, down)
+- 2x temperature/humidity sensor + 4k7 resistor
+- 1 channel relay 5V 10A
+
+todo:
+- adding sensors to program
+- prevent display flashing (new data only on changes)
+- check proper turn on/off conditions for automatic mode
+- autmoatic/manual display light control
