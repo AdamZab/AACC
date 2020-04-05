@@ -1,6 +1,6 @@
 Automatic Air Conditioning Control
 
-Device controls simple ON/OFF air conditioning in car. 3 modes: ON, OFF, AUTOMATIC. On automatic mode you can set temperature and device will maintain it. 
+Device controls simple ON/OFF air conditioning in car. 3 modes: ON, OFF, AUTOMATIC. On automatic mode set temperature will be maintained, also AC will turn on while humidity is high. While on "OFF" mode you cas set humidity at which AC should turn ON. Mode, set temperature, and set humidity is stored on EEPROM (values will remain after reset or power off). CLicking red button changes mode, clicking black button changes humidity/termperature value down, clicking yellow button changes humidity/termperature value up, clicking black & yellow at the same time turns LCD light on/off. 
 
 Used elements:
 - Arduino UNO R3 CH340 AVR ATmega 328
@@ -10,7 +10,8 @@ Used elements:
 - 1 channel relay 5V 10A
 
 todo:
-- adding sensors to program
-- prevent display flashing (new data only on changes)
-- check proper turn on/off conditions for automatic mode
-- autmoatic/manual display light control
+- adding sensors to program - done
+- prevent display flashing  - done
+- check proper turn on/off conditions for automatic mode - done 
+- autmoatic/manual display light control - manual done
+

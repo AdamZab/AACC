@@ -1,6 +1,7 @@
 #include <Wire.h>  
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
+#include <EEPROM.h>
 
 #define YELLOWBUTTONPIN 2
 #define BLACKBUTTONPIN 3
@@ -8,7 +9,10 @@
 #define RELAYPIN 7
 #define SENSOR1PIN 8
 #define SENSOR2PIN 9
-#define RESOLUTION 1
+#define TEMPERATURE_RESOLUTION 1
+#define HUMIDITY_RESOLUTION 5
+#define BUFFOR 2
+#define DEGREES_SIGN 223
 
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 DHT sensor1;
@@ -18,11 +22,16 @@ int redButtonState;
 int blackButtonState;
 int yellowButtonState;
 int relayState;
-int counter = 0;
-int setTemperature = 20;
 bool backLight = true;
 bool printScreenFlag = false;
 String mode;
+signed char bufforMode = 0; // -2 : AC OFF; 2 : AC ON; 0 : buffor OFF 
+int addrSetMode = 0;
+int addrSetTemperature = 1;
+int addrSetHumidity = 2;
+int setMode = EEPROM.read(0);
+int setTemperature = EEPROM.read(1);
+int setHumidity = EEPROM.read(2);
 
 void setup() {
     lcd.begin(16,2);
@@ -38,6 +47,7 @@ void setup() {
     pinMode(BLACKBUTTONPIN, OUTPUT);
     pinMode(YELLOWBUTTONPIN, OUTPUT);
     delay(5000);
+    lcd.clear();
 }
 
 int readTemperature(){
@@ -57,53 +67,83 @@ int readHumidity(){
 void printScreen(int temperature, int humidity, String mode){
     lcd.setCursor(4,0);
     lcd.print(temperature);
-    lcd.print((char) 223);
+    lcd.print((char) DEGREES_SIGN);
     lcd.print("C ");
     lcd.print(humidity);
     lcd.print("%");
     lcd.setCursor(0,1);
     lcd.print(mode); 
-    if (counter == 2){
+    if (setMode == 0){
+        lcd.print(setHumidity);
+        lcd.print("%   ");
+    }
+    else if (setMode == 2){
         lcd.print(setTemperature);
-        lcd.print((char) 223);
-        lcd.print("C");
+        lcd.print((char) DEGREES_SIGN);
+        lcd.print("C  ");
     }
 }
 
-String changeMode(int temperature){
-    if (counter == 3)
-        counter = 0;
+String changeMode(int temperature, int humidity){
+    if (setMode == 3)
+        setMode = 0;
         
-    if (redButtonState == HIGH)
-        counter++;
+    if (redButtonState == HIGH){
+        setMode++;
+        EEPROM.update(0, setMode);
+    }
   
-    if (counter == 0){
-        mode = "       OFF";
+    if (setMode == 0){
+        mode = "Humidity: ";
+        lcd.setCursor(0,0);
+        lcd.print("OFF");
         digitalWrite(RELAYPIN, HIGH);
+        bufforMode = 0;
+        if (blackButtonState == HIGH && yellowButtonState == LOW) {
+            setHumidity = setHumidity - HUMIDITY_RESOLUTION;
+            EEPROM.update(2, setHumidity);
+        }
+
+        if (yellowButtonState == HIGH && blackButtonState == LOW) {
+            setHumidity = setHumidity + HUMIDITY_RESOLUTION;
+            EEPROM.update(2, setHumidity);
+        }
     }
-    else if (counter == 1){
-        mode = "       ON";
+    else if (setMode == 1){
+        mode = "                ";
+        lcd.setCursor(0,0);
+        lcd.print("ON ");
         digitalWrite(RELAYPIN, LOW);
+        bufforMode = 0;
     }
-    else if (counter == 2){
+    else if (setMode == 2){
         mode = "Automatic: ";
-        if (setTemperature < temperature){
+        if (humidity > setHumidity + bufforMode){
             digitalWrite(RELAYPIN, LOW);
             lcd.setCursor(0,0);
             lcd.print("ON ");
         }
-        else if (setTemperature >= temperature){
+        else if (setTemperature - bufforMode <= temperature){
+            digitalWrite(RELAYPIN, LOW);
+            lcd.setCursor(0,0);
+            lcd.print("ON ");
+            bufforMode = 1;
+        }
+        else if (setTemperature + bufforMode > temperature){
             digitalWrite(RELAYPIN, HIGH);
             lcd.setCursor(0,0);
             lcd.print("OFF");
+            bufforMode = -1;
         }
         
         if (blackButtonState == HIGH && yellowButtonState == LOW) {
-            setTemperature = setTemperature - RESOLUTION;
+            setTemperature = setTemperature - TEMPERATURE_RESOLUTION;
+            EEPROM.update(1, setTemperature);
         }
 
         if (yellowButtonState == HIGH && blackButtonState == LOW) {
-            setTemperature = setTemperature + RESOLUTION;
+            setTemperature = setTemperature + TEMPERATURE_RESOLUTION;
+            EEPROM.update(1, setTemperature);
         }
     }
     return mode;
@@ -124,14 +164,13 @@ void changeLight(){
 }
 
 void loop() {
-    lcd.clear();
     redButtonState = digitalRead(REDBUTTONPIN);
     blackButtonState = digitalRead(BLACKBUTTONPIN);
     yellowButtonState = digitalRead(YELLOWBUTTONPIN);
     relayState = digitalRead(RELAYPIN);
     int temperature = readTemperature();
     int humidity = readHumidity();
-    changeMode(temperature);
+    changeMode(temperature, humidity);
     changeLight();
     printScreen(temperature, humidity, mode);
     delay(200);
