@@ -9,6 +9,7 @@
 #define RELAYPIN 7
 #define SENSOR1PIN 8
 #define SENSOR2PIN 9
+#define SENSOR3PIN 10
 #define TEMPERATURE_RESOLUTION 1
 #define HUMIDITY_RESOLUTION 5
 #define BUFFOR 2
@@ -17,6 +18,7 @@
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 DHT sensor1;
 DHT sensor2;
+DHT sensor3;
 
 int redButtonState;
 int blackButtonState;
@@ -42,6 +44,7 @@ void setup() {
     lcd.print("CONTROL");
     sensor1.setup(SENSOR1PIN);
     sensor2.setup(SENSOR2PIN);
+    sensor3.setup(SENSOR3PIN);
     pinMode(RELAYPIN, OUTPUT);
     pinMode(REDBUTTONPIN, OUTPUT);
     pinMode(BLACKBUTTONPIN, OUTPUT);
@@ -64,24 +67,16 @@ int readHumidity(){
     return humidity;
 }
 
-void printScreen(int temperature, int humidity, String mode){
-    lcd.setCursor(4,0);
-    lcd.print(temperature);
+void printFirstLine(int temperatureIn,int temperatureOut, int humidity){
+    lcd.setCursor(0,0);
+    lcd.print(temperatureIn);
     lcd.print((char) DEGREES_SIGN);
     lcd.print("C ");
     lcd.print(humidity);
-    lcd.print("%");
-    lcd.setCursor(0,1);
-    lcd.print(mode); 
-    if (setMode == 0){
-        lcd.print(setHumidity);
-        lcd.print("%   ");
-    }
-    else if (setMode == 2){
-        lcd.print(setTemperature);
-        lcd.print((char) DEGREES_SIGN);
-        lcd.print("C  ");
-    }
+    lcd.print("% | ");
+    lcd.print(temperatureOut);
+    lcd.print((char) DEGREES_SIGN);
+    lcd.print("C ");
 }
 
 String changeMode(int temperature, int humidity){
@@ -94,9 +89,10 @@ String changeMode(int temperature, int humidity){
     }
   
     if (setMode == 0){
-        mode = "Humidity: ";
-        lcd.setCursor(0,0);
-        lcd.print("OFF");
+        lcd.setCursor(0,1);
+        lcd.print("OFF  HUMI:");
+        lcd.print(setHumidity);
+        lcd.print("%   ");
         digitalWrite(RELAYPIN, HIGH);
         bufforMode = 0;
         if (blackButtonState == HIGH && yellowButtonState == LOW) {
@@ -110,31 +106,37 @@ String changeMode(int temperature, int humidity){
         }
     }
     else if (setMode == 1){
-        mode = "                ";
-        lcd.setCursor(0,0);
-        lcd.print("ON ");
+        lcd.setCursor(0,1);
+        lcd.print("ON   HUMI:");
+        lcd.print(setHumidity);
+        lcd.print("%   ");
         digitalWrite(RELAYPIN, LOW);
         bufforMode = 0;
     }
     else if (setMode == 2){
-        mode = "Automatic: ";
+        lcd.setCursor(0,1);
         if (humidity > setHumidity + bufforMode){
             digitalWrite(RELAYPIN, LOW);
-            lcd.setCursor(0,0);
-            lcd.print("ON ");
+            lcd.print("ON   ");
         }
         else if (setTemperature - bufforMode <= temperature){
             digitalWrite(RELAYPIN, LOW);
-            lcd.setCursor(0,0);
-            lcd.print("ON ");
+            lcd.setCursor(0,1);
+            lcd.print("ON   ");
             bufforMode = 1;
         }
         else if (setTemperature + bufforMode > temperature){
             digitalWrite(RELAYPIN, HIGH);
             lcd.setCursor(0,0);
-            lcd.print("OFF");
+            lcd.print("OFF  ");
             bufforMode = -1;
         }
+
+        lcd.print("AUTO:");
+        lcd.print(setTemperature);
+        lcd.print((char) DEGREES_SIGN);
+        lcd.print("C  ");
+     
         
         if (blackButtonState == HIGH && yellowButtonState == LOW) {
             setTemperature = setTemperature - TEMPERATURE_RESOLUTION;
@@ -168,10 +170,11 @@ void loop() {
     blackButtonState = digitalRead(BLACKBUTTONPIN);
     yellowButtonState = digitalRead(YELLOWBUTTONPIN);
     relayState = digitalRead(RELAYPIN);
-    int temperature = readTemperature();
+    int temperatureIn = readTemperature();
+    int temperatureOut = sensor3.getTemperature();
     int humidity = readHumidity();
-    changeMode(temperature, humidity);
+    changeMode(temperatureIn, humidity);
     changeLight();
-    printScreen(temperature, humidity, mode);
+    printFirstLine(temperatureIn, temperatureOut, humidity);
     delay(200);
 }
