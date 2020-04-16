@@ -46,6 +46,7 @@ void setup() {
     sensor2.setup(SENSOR2PIN);
     sensor3.setup(SENSOR3PIN);
     pinMode(RELAYPIN, OUTPUT);
+    digitalWrite(RELAYPIN, HIGH);
     pinMode(REDBUTTONPIN, OUTPUT);
     pinMode(BLACKBUTTONPIN, OUTPUT);
     pinMode(YELLOWBUTTONPIN, OUTPUT);
